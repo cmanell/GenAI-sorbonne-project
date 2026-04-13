@@ -1,3 +1,14 @@
+def calculate(expression: str) -> str:
+    import re
+    try:
+        sanitized = re.sub(r"[^0-9+\-*/()., ]", "", expression)
+        sanitized = sanitized.replace(",", ".")
+        result = eval(sanitized, {"__builtins__": {}})
+        return f"{expression} = {result}"
+    except Exception as e:
+        return f"Impossible de calculer '{expression}' : {e}"
+
+
 def search_documents(vectorstore, query, k=5):
     docs = vectorstore.similarity_search(query, k=k)
     results = []

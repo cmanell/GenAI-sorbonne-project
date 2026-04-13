@@ -55,6 +55,11 @@ MODE_CONFIG = {
         "emoji": "🌐",
         "desc": "Compléter le corpus avec une recherche internet.",
     },
+    "Calculatrice": {
+        "key": "calcul",
+        "emoji": "🧮",
+        "desc": "Effectuer un calcul arithmétique.",
+    },
     "Conversation": {
         "key": "chat",
         "emoji": "💬",
@@ -501,7 +506,7 @@ tab_result, tab_history, tab_corpus = st.tabs(["Résultat", "Historique", "Corpu
 
 with tab_result:
     if run_btn:
-        if st.session_state.vectorstore is None and st.session_state.active_mode not in {"Recherche web", "Conversation"}:
+        if st.session_state.vectorstore is None and st.session_state.active_mode not in {"Recherche web", "Conversation", "Calculatrice"}:
             st.warning("L'index n'est pas prêt. Reconstruis d'abord l'index dans la barre latérale.")
         else:
             llm = get_llm(llm_model)
@@ -553,6 +558,16 @@ with tab_result:
                         st.markdown(quiz)
                         render_sources(docs)
                         add_message("assistant", quiz, mode=mode_key, docs=docs)
+
+                    elif mode_key == "calcul":
+                        from tools import calculate
+                        import re
+                        match = re.search(r"[\d+\-*/()., ]+", query)
+                        expression = match.group().strip() if match else query
+                        result = calculate(expression)
+                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
+                        st.markdown(f"**{result}**")
+                        add_message("assistant", result, mode=mode_key)
 
                     elif mode_key == "chat":
                         history_text = ""

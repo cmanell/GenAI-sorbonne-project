@@ -7,9 +7,10 @@ Catégories :
 - doc_search  : retrouver un document ou un passage précis dans le corpus
 - summary     : résumer un thème ou un ensemble de documents
 - quiz        : générer des questions de révision
+- calcul      : calcul arithmétique (addition, soustraction, multiplication, division)
 - chat        : salutation ou conversation générale sans besoin de documents ni d'outils
 
-Réponds avec un seul mot parmi : rag, web, doc_search, summary, quiz, chat
+Réponds avec un seul mot parmi : rag, web, doc_search, summary, quiz, calcul, chat
 
 Question : {question}
 
@@ -18,7 +19,7 @@ Catégorie :"""
     response = llm.invoke(prompt)
     category = response.content.strip().lower().split()[0]
 
-    valid = {"rag", "web", "doc_search", "summary", "quiz", "chat"}
+    valid = {"rag", "web", "doc_search", "summary", "quiz", "calcul", "chat"}
     return category if category in valid else "rag"
 
 
@@ -40,6 +41,13 @@ def route_query(question, vectorstore, llm):
     elif mode == "quiz":
         from tools import make_quiz
         return {"mode": "quiz", "result": make_quiz(vectorstore, llm, question)}
+
+    elif mode == "calcul":
+        from tools import calculate
+        import re
+        match = re.search(r"[\d+\-*/()., ]+", question)
+        expression = match.group().strip() if match else question
+        return {"mode": "calcul", "result": calculate(expression)}
 
     elif mode == "chat":
         response = llm.invoke(question)
