@@ -30,6 +30,11 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_LLM_MODEL = "mistral"
 
 MODE_CONFIG = {
+    "Auto": {
+        "key": "auto",
+        "emoji": "🤖",
+        "desc": "Détection automatique du mode via le LLM.",
+    },
     "Question-réponse": {
         "key": "rag",
         "emoji": "🧠",
@@ -365,6 +370,100 @@ def add_message(role: str, content: str, mode: str = "rag", docs=None, extra=Non
     )
 
 
+def dispatch_mode(mode_key: str, query: str, llm, vectorstore, k_docs: int, mode_label: str):
+    needs_index = mode_key in {"rag", "doc_search", "summary", "quiz"}
+    if needs_index and vectorstore is None:
+        st.warning("L'index n'est pas prêt. Reconstruis d'abord l'index dans la barre latérale.")
+        return
+
+    if mode_key == "rag":
+        docs = retrieve_documents(vectorstore, query, k=k_docs)
+        answer = generate_answer(query, docs, llm, history=st.session_state.messages)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        st.markdown(answer)
+        render_sources(docs)
+        add_message("assistant", answer, mode=mode_key, docs=docs)
+
+    elif mode_key == "doc_search":
+        results = search_documents(vectorstore, query, k=k_docs)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        if not results:
+            st.info("Aucun document pertinent trouvé.")
+            add_message("assistant", "Aucun document pertinent trouvé.", mode=mode_key)
+        else:
+            blocks = []
+            for r in results:
+                st.markdown(
+                    f"""
+                    <div class='result-card'>
+                        <strong>{Path(r['source']).name}</strong><br>
+                        <span class='tiny'>Page {r['page']}</span><br><br>
+                        {r['excerpt']}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                blocks.append(f"{Path(r['source']).name} — page {r['page']}\n{r['excerpt']}")
+            add_message("assistant", "\n\n".join(blocks), mode=mode_key)
+
+    elif mode_key == "summary":
+        summary, docs = summarize_from_docs(query, vectorstore, llm, k=k_docs)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        st.markdown(summary)
+        render_sources(docs)
+        add_message("assistant", summary, mode=mode_key, docs=docs)
+
+    elif mode_key == "quiz":
+        quiz, docs = generate_quiz(query, vectorstore, llm, k=k_docs)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        st.markdown(quiz)
+        render_sources(docs)
+        add_message("assistant", quiz, mode=mode_key, docs=docs)
+
+    elif mode_key == "calcul":
+        from tools import calculate
+        import re
+        match = re.search(r"[\d+\-*/()., ]+", query)
+        expression = match.group().strip() if match else query
+        result = calculate(expression)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        st.markdown(f"**{result}**")
+        add_message("assistant", result, mode=mode_key)
+
+    elif mode_key == "chat":
+        history_text = ""
+        for msg in st.session_state.messages[-6:]:
+            role = "Utilisateur" if msg["role"] == "user" else "Assistant"
+            history_text += f"{role} : {msg['content']}\n"
+        chat_prompt = f"{history_text}Utilisateur : {query}\nAssistant :"
+        answer = llm.invoke(chat_prompt).content
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        st.markdown(answer)
+        add_message("assistant", answer, mode=mode_key)
+
+    elif mode_key == "web":
+        web_results = search_web(query)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        if not web_results:
+            st.info("Aucun résultat web trouvé.")
+            add_message("assistant", "Aucun résultat web trouvé.", mode=mode_key)
+        else:
+            blocks = []
+            for r in web_results:
+                st.markdown(
+                    f"""
+                    <div class='result-card'>
+                        <strong>{r.get('title', 'Sans titre')}</strong><br>
+                        <span class='tiny'>{r.get('link', '')}</span><br><br>
+                        {r.get('snippet', '')}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                blocks.append(f"{r.get('title', 'Sans titre')}\n{r.get('snippet', '')}")
+            add_message("assistant", "\n\n".join(blocks), mode=mode_key, extra=web_results)
+
+
 # =========================================================
 # SIDEBAR
 # =========================================================
@@ -401,7 +500,7 @@ if "vectorstore" not in st.session_state:
 if "index_ready" not in st.session_state:
     st.session_state.index_ready = False
 if "active_mode" not in st.session_state:
-    st.session_state.active_mode = "Question-réponse"
+    st.session_state.active_mode = "Auto"
 
 if clear_btn:
     st.session_state.messages = []
@@ -477,6 +576,7 @@ for i, (label, cfg) in enumerate(MODE_CONFIG.items()):
 st.info(f"Mode actif : **{st.session_state.active_mode}**")
 
 examples = {
+    "Auto": "Quel est le rôle de FFA4 dans l'inflammation ?",
     "Question-réponse": "Quel est le rôle de FFA4 ?",
     "Recherche de documents": "Retrouve les documents où je parle de YASARA",
     "Résumé": "Résume les agonistes synthétiques de FFA4",
@@ -508,105 +608,25 @@ tab_result, tab_history, tab_corpus = st.tabs(["Résultat", "Historique", "Corpu
 
 with tab_result:
     if run_btn:
-        if st.session_state.vectorstore is None and st.session_state.active_mode not in {"Recherche web", "Conversation", "Calculatrice"}:
-            st.warning("L'index n'est pas prêt. Reconstruis d'abord l'index dans la barre latérale.")
-        else:
-            llm = get_llm(llm_model)
-            mode_key = MODE_CONFIG[st.session_state.active_mode]["key"]
-            add_message("user", query, mode=mode_key)
+        llm = get_llm(llm_model)
+        mode_key = MODE_CONFIG[st.session_state.active_mode]["key"]
+        add_message("user", query, mode=mode_key)
 
-            with st.spinner("Traitement en cours..."):
-                try:
-                    if mode_key == "rag":
-                        docs = retrieve_documents(st.session_state.vectorstore, query, k=k_docs)
-                        answer = generate_answer(query, docs, llm, history=st.session_state.messages)
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        st.markdown(answer)
-                        render_sources(docs)
-                        add_message("assistant", answer, mode=mode_key, docs=docs)
+        with st.spinner("Traitement en cours..."):
+            try:
+                if mode_key == "auto":
+                    from router import classify_query
+                    detected_key = classify_query(query, llm)
+                    mode_labels = {v["key"]: k for k, v in MODE_CONFIG.items() if v["key"] != "auto"}
+                    detected_label = mode_labels.get(detected_key, "Question-réponse")
+                    st.info(f"Mode détecté : **{MODE_CONFIG[detected_label]['emoji']} {detected_label}**")
+                    dispatch_mode(detected_key, query, llm, st.session_state.vectorstore, k_docs, detected_label)
+                else:
+                    dispatch_mode(mode_key, query, llm, st.session_state.vectorstore, k_docs, st.session_state.active_mode)
 
-                    elif mode_key == "doc_search":
-                        results = search_documents(st.session_state.vectorstore, query, k=k_docs)
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        if not results:
-                            st.info("Aucun document pertinent trouvé.")
-                            add_message("assistant", "Aucun document pertinent trouvé.", mode=mode_key)
-                        else:
-                            blocks = []
-                            for r in results:
-                                st.markdown(
-                                    f"""
-                                    <div class='result-card'>
-                                        <strong>{Path(r['source']).name}</strong><br>
-                                        <span class='tiny'>Page {r['page']}</span><br><br>
-                                        {r['excerpt']}
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True,
-                                )
-                                blocks.append(f"{Path(r['source']).name} — page {r['page']}\n{r['excerpt']}")
-                            add_message("assistant", "\n\n".join(blocks), mode=mode_key)
-
-                    elif mode_key == "summary":
-                        summary, docs = summarize_from_docs(query, st.session_state.vectorstore, llm, k=k_docs)
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        st.markdown(summary)
-                        render_sources(docs)
-                        add_message("assistant", summary, mode=mode_key, docs=docs)
-
-                    elif mode_key == "quiz":
-                        quiz, docs = generate_quiz(query, st.session_state.vectorstore, llm, k=k_docs)
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        st.markdown(quiz)
-                        render_sources(docs)
-                        add_message("assistant", quiz, mode=mode_key, docs=docs)
-
-                    elif mode_key == "calcul":
-                        from tools import calculate
-                        import re
-                        match = re.search(r"[\d+\-*/()., ]+", query)
-                        expression = match.group().strip() if match else query
-                        result = calculate(expression)
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        st.markdown(f"**{result}**")
-                        add_message("assistant", result, mode=mode_key)
-
-                    elif mode_key == "chat":
-                        history_text = ""
-                        for msg in st.session_state.messages[-6:]:
-                            role = "Utilisateur" if msg["role"] == "user" else "Assistant"
-                            history_text += f"{role} : {msg['content']}\n"
-                        chat_prompt = f"{history_text}Utilisateur : {query}\nAssistant :"
-                        answer = llm.invoke(chat_prompt).content
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        st.markdown(answer)
-                        add_message("assistant", answer, mode=mode_key)
-
-                    elif mode_key == "web":
-                        web_results = search_web(query)
-                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
-                        if not web_results:
-                            st.info("Aucun résultat web trouvé.")
-                            add_message("assistant", "Aucun résultat web trouvé.", mode=mode_key)
-                        else:
-                            blocks = []
-                            for r in web_results:
-                                st.markdown(
-                                    f"""
-                                    <div class='result-card'>
-                                        <strong>{r.get('title', 'Sans titre')}</strong><br>
-                                        <span class='tiny'>{r.get('link', '')}</span><br><br>
-                                        {r.get('snippet', '')}
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True,
-                                )
-                                blocks.append(f"{r.get('title', 'Sans titre')}\n{r.get('snippet', '')}")
-                            add_message("assistant", "\n\n".join(blocks), mode=mode_key, extra=web_results)
-
-                except Exception as e:
-                    st.error(f"Erreur : {e}")
-                    add_message("assistant", f"Erreur : {e}", mode=mode_key)
+            except Exception as e:
+                st.error(f"Erreur : {e}")
+                add_message("assistant", f"Erreur : {e}", mode=mode_key)
     else:
         st.markdown("<div class='soft-card'>Lance une requête pour voir le résultat ici.</div>", unsafe_allow_html=True)
 
