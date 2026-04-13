@@ -10,3 +10,4 @@ docx2txt
 ddgs
 torch
 torchvision
+openai==1.0.0
