@@ -9,18 +9,26 @@ def search_documents(vectorstore, query, k=5):
         })
     return results
 
-def summarize_text(llm, text):
+def summarize_document(vectorstore, llm, query, k=4):
+    docs = vectorstore.similarity_search(query, k=k)
+    if not docs:
+        return "Je ne trouve pas de contenu pertinent à résumer."
+    text = "\n\n".join([doc.page_content for doc in docs])
     prompt = f"Résume ce texte en français de façon claire :\n\n{text}"
     response = llm.invoke(prompt)
     return response.content
 
 
-def generate_quiz(llm, text):
+def make_quiz(vectorstore, llm, query, k=4):
+    docs = vectorstore.similarity_search(query, k=k)
+    if not docs:
+        return "Je ne trouve pas assez de contenu pour générer un quiz."
+    text = "\n\n".join([doc.page_content for doc in docs])
     prompt = f"Génère 3 questions de révision à partir du texte suivant :\n\n{text}"
     response = llm.invoke(prompt)
     return response.content
 
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 def search_web(query: str, max_results: int = 5):
     results = []

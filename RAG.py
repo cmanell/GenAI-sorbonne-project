@@ -194,6 +194,15 @@ def print_sources(context_docs):
 
 
 
+# 9b) ANSWER WITH RAG (utilisé par router.py)
+
+def answer_with_rag(vectorstore, question: str):
+    docs = retrieve_documents(vectorstore, question)
+    answer = generate_answer(question, docs)
+    return {"mode": "rag", "answer": answer, "docs": docs}
+
+
+
 # 10) MAIN
 
 def main():
