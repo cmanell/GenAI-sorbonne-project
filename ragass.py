@@ -55,6 +55,11 @@ MODE_CONFIG = {
         "emoji": "🌐",
         "desc": "Compléter le corpus avec une recherche internet.",
     },
+    "Conversation": {
+        "key": "chat",
+        "emoji": "💬",
+        "desc": "Discussion libre sans RAG ni outils.",
+    },
 }
 
 
@@ -496,7 +501,7 @@ tab_result, tab_history, tab_corpus = st.tabs(["Résultat", "Historique", "Corpu
 
 with tab_result:
     if run_btn:
-        if st.session_state.vectorstore is None and st.session_state.active_mode != "Recherche web":
+        if st.session_state.vectorstore is None and st.session_state.active_mode not in {"Recherche web", "Conversation"}:
             st.warning("L'index n'est pas prêt. Reconstruis d'abord l'index dans la barre latérale.")
         else:
             llm = get_llm(llm_model)
@@ -548,6 +553,17 @@ with tab_result:
                         st.markdown(quiz)
                         render_sources(docs)
                         add_message("assistant", quiz, mode=mode_key, docs=docs)
+
+                    elif mode_key == "chat":
+                        history_text = ""
+                        for msg in st.session_state.messages[-6:]:
+                            role = "Utilisateur" if msg["role"] == "user" else "Assistant"
+                            history_text += f"{role} : {msg['content']}\n"
+                        chat_prompt = f"{history_text}Utilisateur : {query}\nAssistant :"
+                        answer = llm.invoke(chat_prompt).content
+                        st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
+                        st.markdown(answer)
+                        add_message("assistant", answer, mode=mode_key)
 
                     elif mode_key == "web":
                         web_results = search_web(query)
