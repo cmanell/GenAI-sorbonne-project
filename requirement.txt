@@ -1,6 +1,8 @@
 streamlit
 python-dotenv
+langchain
 langchain-community
+langchain-openai
 langchain-text-splitters
 langchain-ollama
 faiss-cpu
