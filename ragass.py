@@ -217,7 +217,7 @@ def retrieve_documents(vectorstore, question: str, k: int = 4):
     return retriever.invoke(question)
 
 
-def generate_answer(question: str, docs, llm) -> str:
+def generate_answer(question: str, docs, llm, history: List[Dict[str, str]] = None) -> str:
     if not docs:
         return "Je ne trouve pas d'information pertinente dans les documents."
 
@@ -227,6 +227,14 @@ def generate_answer(question: str, docs, llm) -> str:
             for doc in docs
         ]
     )
+
+    history_text = ""
+    if history:
+        lines = []
+        for msg in history[-6:]:  # 3 derniers échanges max
+            role = "Utilisateur" if msg["role"] == "user" else "Assistant"
+            lines.append(f"{role} : {msg['content']}")
+        history_text = "\n".join(lines)
 
     prompt = f"""
 Tu es un assistant de recherche scientifique spécialisé dans les récepteurs FFA/GPCR.
@@ -239,7 +247,9 @@ Contraintes :
 - ne rien inventer
 - chaque affirmation doit être suivie d'une citation inline au format [nom_du_fichier, p.X]
   Exemple : "FFA4 est impliqué dans la régulation de l'inflammation [etude_gpcr.pdf, p.3]."
+{f"- tiens compte de l'historique de conversation ci-dessous pour contextualiser ta réponse" if history_text else ""}
 
+{f"Historique :{chr(10)}{history_text}{chr(10)}" if history_text else ""}
 Contexte :
 {context}
 
@@ -497,7 +507,7 @@ with tab_result:
                 try:
                     if mode_key == "rag":
                         docs = retrieve_documents(st.session_state.vectorstore, query, k=k_docs)
-                        answer = generate_answer(query, docs, llm)
+                        answer = generate_answer(query, docs, llm, history=st.session_state.messages)
                         st.markdown(f"<div class='mode-tag'>{st.session_state.active_mode}</div>", unsafe_allow_html=True)
                         st.markdown(answer)
                         render_sources(docs)
