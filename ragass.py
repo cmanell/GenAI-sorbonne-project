@@ -237,7 +237,8 @@ Contraintes :
 - réponse en français
 - style clair, académique et structuré
 - ne rien inventer
-- termine par une ligne courte indiquant les fichiers utilisés
+- chaque affirmation doit être suivie d'une citation inline au format [nom_du_fichier, p.X]
+  Exemple : "FFA4 est impliqué dans la régulation de l'inflammation [etude_gpcr.pdf, p.3]."
 
 Contexte :
 {context}

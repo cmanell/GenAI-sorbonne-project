@@ -155,10 +155,10 @@ Si l'information n'est pas dans le contexte, dis clairement :
 "Je ne trouve pas cette information dans les documents fournis."
 
 La réponse doit être :
-- claire
-- précise
-- structurée
+- claire, précise et structurée
 - fidèle aux documents
+- chaque affirmation doit être suivie d'une citation inline au format [nom_du_fichier, p.X]
+  Exemple : "FFA4 est impliqué dans la régulation de l'inflammation [etude_gpcr.pdf, p.3]."
 
 Contexte :
 {context}
