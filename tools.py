@@ -1,5 +1,9 @@
+import re
+
+from ddgs import DDGS
+
+
 def calculate(expression: str) -> str:
-    import re
     try:
         sanitized = re.sub(r"[^0-9+\-*/()., ]", "", expression)
         sanitized = sanitized.replace(",", ".")
@@ -20,6 +24,7 @@ def search_documents(vectorstore, query, k=5):
         })
     return results
 
+
 def summarize_document(vectorstore, llm, query, k=4):
     docs = vectorstore.similarity_search(query, k=k)
     if not docs:
@@ -39,43 +44,30 @@ def make_quiz(vectorstore, llm, query, k=4):
     response = llm.invoke(prompt)
     return response.content
 
-from ddgs import DDGS
 
 def search_web(query: str, max_results: int = 5):
     results = []
-
     try:
         with DDGS() as ddgs:
-            found = ddgs.text(
-                query,
-                max_results=max_results
-            )
-
+            found = ddgs.text(query, max_results=max_results)
             for r in found:
-                results.append(
-                    {
-                        "title": r.get("title", "Sans titre"),
-                        "link": r.get("href", "") or r.get("url", ""),
-                        "snippet": r.get("body", "") or r.get("snippet", ""),
-                    }
-                )
-
+                results.append({
+                    "title": r.get("title", "Sans titre"),
+                    "link": r.get("href", "") or r.get("url", ""),
+                    "snippet": r.get("body", "") or r.get("snippet", ""),
+                })
     except Exception as e:
-        results.append(
-            {
-                "title": "Erreur de recherche web",
-                "link": "",
-                "snippet": f"Impossible d'exécuter la recherche : {e}",
-            }
-        )
-
+        results.append({
+            "title": "Erreur de recherche web",
+            "link": "",
+            "snippet": f"Impossible d'exécuter la recherche : {e}",
+        })
     return results
+
 
 def web_summary(llm, query):
     results = search_web(query)
-
     text = "\n\n".join([r["snippet"] for r in results])
-
     prompt = f"""
 Résume ces informations issues du web :
 
@@ -83,6 +75,5 @@ Résume ces informations issues du web :
 
 Réponse :
 """
-
     response = llm.invoke(prompt)
     return response.content
