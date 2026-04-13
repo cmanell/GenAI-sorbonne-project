@@ -482,6 +482,8 @@ examples = {
     "Résumé": "Résume les agonistes synthétiques de FFA4",
     "Quiz": "Fais-moi un quiz sur FFA4",
     "Recherche web": "Cherche sur internet FFA4 receptor inflammation",
+    "Calculatrice": "Calcule 3.14 * 6.5 * 6.5",
+    "Conversation": "Bonjour, que peux-tu faire pour moi ?",
 }
 
 left, right = st.columns([2.2, 1])
