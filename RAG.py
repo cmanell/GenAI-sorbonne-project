@@ -98,7 +98,7 @@ def build_or_load_vectorstore(chunks):
 # 6) RECHERCHE SIMPLE
 
 def retrieve_documents(vectorstore, question: str, k: int = 4):
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": k})
     docs = retriever.invoke(question)
     return docs
 
