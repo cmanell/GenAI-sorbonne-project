@@ -1,4 +1,4 @@
-from rag import load_documents, split_documents, build_or_load_vectorstore, generate_answer
+from RAG import load_documents, split_documents, build_or_load_vectorstore, generate_answer
 from router import route_query
 from langchain_ollama import ChatOllama
 
