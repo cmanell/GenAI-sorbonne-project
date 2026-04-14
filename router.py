@@ -1,63 +1,72 @@
-import os
-import re
-
-from langchain_mistralai import ChatMistralAI
-from tools import search_web, search_documents, summarize_document, make_quiz, calculate
-from RAG import answer_with_rag
-
-
-def get_llm(model: str = "mistral-small-latest") -> ChatMistralAI:
-    return ChatMistralAI(model=model, temperature=0, api_key=os.getenv("MISTRAL_API_KEY"))
+from typing import Dict, Any
+import RAG
+from tools import (
+    extract_math_expression, calculate, 
+    extract_city_from_weather_question, 
+    weather_tool, web_summary, summarize_document)
 
 
 def classify_query(question: str, llm) -> str:
-    prompt = f"""Tu es un routeur intelligent. Classe la question suivante dans exactement une des catégories ci-dessous.
+    prompt = f"""Tu es un routeur intelligent.
+Classe la question suivante dans exactement une seule catégorie.
 
 Catégories :
-- rag         : question sur le contenu des documents internes (articles, notes, corpus)
-- web         : recherche d'informations sur internet
-- doc_search  : retrouver un document ou un passage précis dans le corpus
-- summary     : résumer un thème ou un ensemble de documents
-- quiz        : générer des questions de révision
-- calcul      : calcul arithmétique (addition, soustraction, multiplication, division)
-- chat        : salutation ou conversation générale sans besoin de documents ni d'outils
+- rag
+- web
+- doc_search
+- summary
+- quiz
+- calcul
+- weather
+- chat
 
-Réponds avec un seul mot parmi : rag, web, doc_search, summary, quiz, calcul, chat
+Réponds avec un seul mot parmi :
+rag, web, doc_search, summary, quiz, calcul, weather, chat
 
 Question : {question}
 
-Catégorie :"""
-
+Catégorie :
+"""
     response = llm.invoke(prompt)
     category = response.content.strip().lower().split()[0]
 
-    valid = {"rag", "web", "doc_search", "summary", "quiz", "calcul", "chat"}
+    valid = {"rag", "web", "doc_search", "summary", "quiz", "calcul", "weather", "chat"}
     return category if category in valid else "rag"
 
 
-def route_query(question, vectorstore, llm):
+def route_query(question: str, vectorstore, llm, history=None, k_docs: int = 4) -> Dict[str, Any]:
     mode = classify_query(question, llm)
 
     if mode == "web":
-        return {"mode": "web", "result": search_web(question)}
+        answer, results = web_summary(llm, question)
+        return {"mode": "web", "result": answer, "extra": results}
 
-    elif mode == "doc_search":
-        return {"mode": "doc_search", "result": search_documents(vectorstore, question)}
+    if mode == "doc_search":
+        results = RAG.search_documents(vectorstore, question, k=k_docs)
+        return {"mode": "doc_search", "result": results}
 
-    elif mode == "summary":
-        return {"mode": "summary", "result": summarize_document(vectorstore, llm, question)}
+    if mode == "summary":
+        summary, docs = summarize_document(vectorstore, llm, question, k=k_docs)
+        return {"mode": "summary", "result": summary, "docs": docs}
 
-    elif mode == "quiz":
-        return {"mode": "quiz", "result": make_quiz(vectorstore, llm, question)}
+    if mode == "quiz":
+        quiz, docs = make_quiz(vectorstore, llm, question, k=k_docs)
+        return {"mode": "quiz", "result": quiz, "docs": docs}
 
-    elif mode == "calcul":
-        match = re.search(r"[\d+\-*/()., ]+", question)
-        expression = match.group().strip() if match else question
-        return {"mode": "calcul", "result": calculate(expression)}
+    if mode == "calcul":
+        expression = extract_math_expression(question)
+        result = calculate(expression)
+        return {"mode": "calcul", "result": result}
 
-    elif mode == "chat":
+    if mode == "weather":
+        city = extract_city_from_weather_question(question)
+        result = weather_tool(city)
+        return {"mode": "weather", "result": result}
+
+    if mode == "chat":
         response = llm.invoke(question)
         return {"mode": "chat", "result": response.content}
 
-    else:  # rag par défaut
-        return answer_with_rag(vectorstore, question)
+    docs = RAG.retrieve_documents(vectorstore, question, k=k_docs)
+    answer = RAG.generate_answer(question, docs, llm, history=history)
+    return {"mode": "rag", "result": answer, "docs": docs}

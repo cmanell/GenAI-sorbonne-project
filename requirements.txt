@@ -1,0 +1,12 @@
+streamlit
+python-dotenv
+langchain
+langchain-community
+langchain-mistralai
+langchain-text-splitters
+faiss-cpu
+sentence-transformers
+pypdf
+docx2txt
+ddgs
+requests
