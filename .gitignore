@@ -1,3 +1,5 @@
 .venv/
+.env
 Data/
 output/
+faiss_index/

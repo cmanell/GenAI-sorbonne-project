@@ -6,7 +6,7 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
+from langchain_mistralai import ChatMistralAI
 
 # 1) CONFIGURATION
 
@@ -14,12 +14,8 @@ load_dotenv()
 
 DATA_DIR = "data"
 FAISS_DIR = "faiss_index"
-
-USE_OPENAI_FOR_ANSWER = True
-LOCAL_LLM_MODEL = "mistral"
-
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-CHAT_MODEL = "gpt-4.1-mini"
+MISTRAL_MODEL = "mistral-small-latest"
 
 
 
@@ -67,9 +63,7 @@ def split_documents(documents, chunk_size: int = 1000, chunk_overlap: int = 200)
 # 4) EMBEDDINGS LOCAUX
 
 def get_embeddings():
-    return HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL
-    )
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
 
 
@@ -98,45 +92,22 @@ def build_or_load_vectorstore(chunks):
 # 6) RECHERCHE SIMPLE
 
 def retrieve_documents(vectorstore, question: str, k: int = 4):
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": k})
     docs = retriever.invoke(question)
     return docs
 
 
 
-# 7) REPONSE LOCALE SANS OPENAI
-
-def local_answer(question: str, docs):
-    if not docs:
-        return "Je ne trouve pas d'information pertinente dans les documents."
-
-    answer = []
-    answer.append(
-        "Je n'utilise pas de LLM ici : voici les passages les plus pertinents retrouvés pour ta question.\n"
-    )
-
-    for i, doc in enumerate(docs, start=1):
-        source = doc.metadata.get("source", "Source inconnue")
-        page = doc.metadata.get("page", "N/A")
-        excerpt = doc.page_content[:700].replace("\n", " ").strip()
-
-        answer.append(
-            f"[Passage {i}] Source: {source} | Page: {page}\n{excerpt}\n"
-        )
-
-    return "\n".join(answer)
-
-
-
-# 8) REPONSE AVEC Mistral
+# 7) REPONSE AVEC MISTRAL API
 
 def generate_answer(question: str, docs):
     if not docs:
         return "Je ne trouve pas d'information pertinente dans les documents."
 
-    llm = ChatOllama(
-        model="mistral",   # ou "llama3"
-        temperature=0
+    llm = ChatMistralAI(
+        model=MISTRAL_MODEL,
+        temperature=0,
+        api_key=os.getenv("MISTRAL_API_KEY"),
     )
 
     context = "\n\n".join(
@@ -155,10 +126,10 @@ Si l'information n'est pas dans le contexte, dis clairement :
 "Je ne trouve pas cette information dans les documents fournis."
 
 La réponse doit être :
-- claire
-- précise
-- structurée
+- claire, précise et structurée
 - fidèle aux documents
+- chaque affirmation doit être suivie d'une citation inline au format [nom_du_fichier, p.X]
+  Exemple : "FFA4 est impliqué dans la régulation de l'inflammation [etude_gpcr.pdf, p.3]."
 
 Contexte :
 {context}
@@ -174,7 +145,7 @@ Réponse :
 
 
 
-# 9) AFFICHER LES SOURCES
+# 8) AFFICHER LES SOURCES
 
 def print_sources(context_docs):
     print("\n" + "=" * 80)
@@ -191,6 +162,15 @@ def print_sources(context_docs):
         print("Extrait :")
         print(doc.page_content[:600].replace("\n", " "))
         print()
+
+
+
+# 9) ANSWER WITH RAG (utilisé par router.py)
+
+def answer_with_rag(vectorstore, question: str):
+    docs = retrieve_documents(vectorstore, question)
+    answer = generate_answer(question, docs)
+    return {"mode": "rag", "answer": answer, "docs": docs}
 
 
 
@@ -224,11 +204,7 @@ def main():
 
         try:
             docs = retrieve_documents(vectorstore, question, k=4)
-
-            if USE_OPENAI_FOR_ANSWER:
-                answer = generate_answer(question, docs)
-            else:
-                answer = local_answer(question, docs)
+            answer = generate_answer(question, docs)
 
             print("\n" + "=" * 80)
             print("REPONSE")

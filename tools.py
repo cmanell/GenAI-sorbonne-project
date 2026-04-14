@@ -1,3 +1,18 @@
+import re
+
+from ddgs import DDGS
+
+
+def calculate(expression: str) -> str:
+    try:
+        sanitized = re.sub(r"[^0-9+\-*/()., ]", "", expression)
+        sanitized = sanitized.replace(",", ".")
+        result = eval(sanitized, {"__builtins__": {}})
+        return f"{expression} = {result}"
+    except Exception as e:
+        return f"Impossible de calculer '{expression}' : {e}"
+
+
 def search_documents(vectorstore, query, k=5):
     docs = vectorstore.similarity_search(query, k=k)
     results = []
@@ -9,54 +24,50 @@ def search_documents(vectorstore, query, k=5):
         })
     return results
 
-def summarize_text(llm, text):
+
+def summarize_document(vectorstore, llm, query, k=4):
+    docs = vectorstore.similarity_search(query, k=k)
+    if not docs:
+        return "Je ne trouve pas de contenu pertinent à résumer."
+    text = "\n\n".join([doc.page_content for doc in docs])
     prompt = f"Résume ce texte en français de façon claire :\n\n{text}"
     response = llm.invoke(prompt)
     return response.content
 
 
-def generate_quiz(llm, text):
+def make_quiz(vectorstore, llm, query, k=4):
+    docs = vectorstore.similarity_search(query, k=k)
+    if not docs:
+        return "Je ne trouve pas assez de contenu pour générer un quiz."
+    text = "\n\n".join([doc.page_content for doc in docs])
     prompt = f"Génère 3 questions de révision à partir du texte suivant :\n\n{text}"
     response = llm.invoke(prompt)
     return response.content
 
-from duckduckgo_search import DDGS
 
 def search_web(query: str, max_results: int = 5):
     results = []
-
     try:
         with DDGS() as ddgs:
-            found = ddgs.text(
-                query,
-                max_results=max_results
-            )
-
+            found = ddgs.text(query, max_results=max_results)
             for r in found:
-                results.append(
-                    {
-                        "title": r.get("title", "Sans titre"),
-                        "link": r.get("href", "") or r.get("url", ""),
-                        "snippet": r.get("body", "") or r.get("snippet", ""),
-                    }
-                )
-
+                results.append({
+                    "title": r.get("title", "Sans titre"),
+                    "link": r.get("href", "") or r.get("url", ""),
+                    "snippet": r.get("body", "") or r.get("snippet", ""),
+                })
     except Exception as e:
-        results.append(
-            {
-                "title": "Erreur de recherche web",
-                "link": "",
-                "snippet": f"Impossible d'exécuter la recherche : {e}",
-            }
-        )
-
+        results.append({
+            "title": "Erreur de recherche web",
+            "link": "",
+            "snippet": f"Impossible d'exécuter la recherche : {e}",
+        })
     return results
+
 
 def web_summary(llm, query):
     results = search_web(query)
-
     text = "\n\n".join([r["snippet"] for r in results])
-
     prompt = f"""
 Résume ces informations issues du web :
 
@@ -64,6 +75,5 @@ Résume ces informations issues du web :
 
 Réponse :
 """
-
     response = llm.invoke(prompt)
     return response.content
