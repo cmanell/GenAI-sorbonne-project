@@ -448,20 +448,31 @@ def dispatch_mode(mode_key: str, query: str, llm, vectorstore, k_docs: int, mode
             st.info("Aucun résultat web trouvé.")
             add_message("assistant", "Aucun résultat web trouvé.", mode=mode_key)
         else:
-            blocks = []
-            for r in web_results:
-                st.markdown(
-                    f"""
-                    <div class='result-card'>
-                        <strong>{r.get('title', 'Sans titre')}</strong><br>
-                        <span class='tiny'>{r.get('link', '')}</span><br><br>
-                        {r.get('snippet', '')}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                blocks.append(f"{r.get('title', 'Sans titre')}\n{r.get('snippet', '')}")
-            add_message("assistant", "\n\n".join(blocks), mode=mode_key, extra=web_results)
+            snippets = "\n\n".join([r.get("snippet", "") for r in web_results if r.get("snippet")])
+            synthesis_prompt = f"""Tu es un assistant de recherche. Synthétise ces informations issues du web en une réponse claire et structurée en français.
+
+Informations :
+{snippets}
+
+Question : {query}
+
+Réponse :"""
+            answer = llm.invoke(synthesis_prompt).content
+            st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+            st.markdown(answer)
+            with st.expander("Sources web", expanded=False):
+                for r in web_results:
+                    st.markdown(
+                        f"""
+                        <div class='result-card'>
+                            <strong>{r.get('title', 'Sans titre')}</strong><br>
+                            <span class='tiny'>{r.get('link', '')}</span><br><br>
+                            {r.get('snippet', '')}
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            add_message("assistant", answer, mode=mode_key, extra=web_results)
 
 
 # =========================================================
