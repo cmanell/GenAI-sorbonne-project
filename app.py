@@ -1,13 +1,12 @@
 from RAG import load_documents, split_documents, build_or_load_vectorstore, generate_answer
-from router import route_query
-from langchain_ollama import ChatOllama
+from router import route_query, get_llm
 
 def main():
     documents = load_documents("data")
     chunks = split_documents(documents)
     vectorstore = build_or_load_vectorstore(chunks)
 
-    llm = ChatOllama(model="mistral", temperature=0)
+    llm = get_llm()
 
     print("Assistant prêt. Tape 'quit' pour quitter.")
 

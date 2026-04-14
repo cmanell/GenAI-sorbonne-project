@@ -9,7 +9,7 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
+from langchain_mistralai import ChatMistralAI
 
 try:
     from ddgs import DDGS
@@ -27,7 +27,7 @@ APP_TITLE = "GPCR Research Assistant"
 DEFAULT_DATA_DIR = "data"
 DEFAULT_INDEX_DIR = "faiss_index"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-DEFAULT_LLM_MODEL = "mistral"
+DEFAULT_LLM_MODEL = "mistral-small-latest"
 
 MODE_CONFIG = {
     "Auto": {
@@ -170,7 +170,7 @@ def get_embeddings():
 
 @st.cache_resource(show_spinner=False)
 def get_llm(model_name: str):
-    return ChatOllama(model=model_name, temperature=0)
+    return ChatMistralAI(model=model_name, temperature=0, api_key=os.getenv("MISTRAL_API_KEY"))
 
 
 def list_supported_files(folder_path: str) -> List[Path]:
@@ -471,7 +471,7 @@ with st.sidebar:
     st.title("⚙️ Réglages")
     folder_path = st.text_input("Dossier du corpus", value=DEFAULT_DATA_DIR)
     index_dir = st.text_input("Dossier de l'index", value=DEFAULT_INDEX_DIR)
-    llm_model = st.selectbox("LLM local", ["mistral", "llama3"], index=0)
+    llm_model = st.selectbox("Modèle Mistral", ["mistral-small-latest", "mistral-large-latest", "open-mistral-7b"], index=0)
     chunk_size = st.slider("Chunk size", 400, 1800, 1000, 100)
     chunk_overlap = st.slider("Chunk overlap", 50, 400, 200, 25)
     k_docs = st.slider("Top-k passages", 2, 8, 4)

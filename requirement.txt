@@ -2,14 +2,10 @@ streamlit
 python-dotenv
 langchain
 langchain-community
-langchain-openai
+langchain-mistralai
 langchain-text-splitters
-langchain-ollama
 faiss-cpu
 sentence-transformers
 pypdf
 docx2txt
 ddgs
-torch
-torchvision
-openai==1.0.0

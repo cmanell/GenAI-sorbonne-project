@@ -1,3 +1,15 @@
+import os
+import re
+
+from langchain_mistralai import ChatMistralAI
+from tools import search_web, search_documents, summarize_document, make_quiz, calculate
+from RAG import answer_with_rag
+
+
+def get_llm(model: str = "mistral-small-latest") -> ChatMistralAI:
+    return ChatMistralAI(model=model, temperature=0, api_key=os.getenv("MISTRAL_API_KEY"))
+
+
 def classify_query(question: str, llm) -> str:
     prompt = f"""Tu es un routeur intelligent. Classe la question suivante dans exactement une des catégories ci-dessous.
 
@@ -27,24 +39,18 @@ def route_query(question, vectorstore, llm):
     mode = classify_query(question, llm)
 
     if mode == "web":
-        from tools import search_web
         return {"mode": "web", "result": search_web(question)}
 
     elif mode == "doc_search":
-        from tools import search_documents
         return {"mode": "doc_search", "result": search_documents(vectorstore, question)}
 
     elif mode == "summary":
-        from tools import summarize_document
         return {"mode": "summary", "result": summarize_document(vectorstore, llm, question)}
 
     elif mode == "quiz":
-        from tools import make_quiz
         return {"mode": "quiz", "result": make_quiz(vectorstore, llm, question)}
 
     elif mode == "calcul":
-        from tools import calculate
-        import re
         match = re.search(r"[\d+\-*/()., ]+", question)
         expression = match.group().strip() if match else question
         return {"mode": "calcul", "result": calculate(expression)}
@@ -54,5 +60,4 @@ def route_query(question, vectorstore, llm):
         return {"mode": "chat", "result": response.content}
 
     else:  # rag par défaut
-        from RAG import answer_with_rag
         return answer_with_rag(vectorstore, question)
