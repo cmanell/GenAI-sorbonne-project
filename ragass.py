@@ -492,6 +492,35 @@ with st.sidebar:
     clear_btn = st.button("🧹 Vider l'historique", use_container_width=True)
 
     st.markdown("---")
+    st.subheader("Ajouter un document")
+    uploaded_file = st.file_uploader("PDF ou DOCX", type=["pdf", "docx"], label_visibility="collapsed")
+    if uploaded_file is not None:
+        dest = Path(folder_path) / uploaded_file.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with open(dest, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success(f"**{uploaded_file.name}** sauvegardé dans `{folder_path}/`")
+        if st.button("➕ Indexer ce document", use_container_width=True):
+            with st.spinner("Indexation en cours..."):
+                try:
+                    if dest.suffix.lower() == ".pdf":
+                        new_docs = PyPDFLoader(str(dest)).load()
+                    else:
+                        new_docs = Docx2txtLoader(str(dest)).load()
+                    new_chunks = split_documents(new_docs, chunk_size, chunk_overlap)
+                    if st.session_state.vectorstore is not None:
+                        st.session_state.vectorstore.add_documents(new_chunks)
+                        st.session_state.vectorstore.save_local(index_dir)
+                    else:
+                        st.session_state.vectorstore = FAISS.from_documents(new_chunks, get_embeddings())
+                        st.session_state.vectorstore.save_local(index_dir)
+                        st.session_state.index_ready = True
+                    st.success(f"{len(new_chunks)} chunks ajoutés à l'index.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur lors de l'indexation : {e}")
+
+    st.markdown("---")
     files = list_supported_files(folder_path)
     st.subheader("Corpus détecté")
     st.caption(f"{len(files)} fichier(s)")
