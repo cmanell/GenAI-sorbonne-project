@@ -13,7 +13,7 @@ from memory import init_memory, add_message, clear_memory, get_history
 
 load_dotenv()
 
-APP_TITLE = "GPCR Research Assistant"
+APP_TITLE = "Thesis Research Assistant"
 DEFAULT_DATA_DIR = "data"
 DEFAULT_INDEX_DIR = "faiss_index"
 DEFAULT_LLM_MODEL = "mistral-small-latest"
