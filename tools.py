@@ -12,15 +12,20 @@ def _extract_expression(text: str) -> str:
     return " ".join(tokens)
 
 
+def _to_numexpr(expr: str) -> str:
+    """Convert ^ to ** for numexpr compatibility."""
+    return expr.replace("^", "**")
+
+
 def calculate(expression: str) -> str:
     try:
         try:
-            result = numexpr.evaluate(expression.strip())
+            result = numexpr.evaluate(_to_numexpr(expression.strip()))
         except Exception:
             cleaned = _extract_expression(expression)
             if not cleaned:
                 return f"Erreur de calcul : expression non reconnue — '{expression}'"
-            result = numexpr.evaluate(cleaned)
+            result = numexpr.evaluate(_to_numexpr(cleaned))
 
         value = result.item() if hasattr(result, "item") else result
         if isinstance(value, float) and value.is_integer():
