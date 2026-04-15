@@ -35,6 +35,18 @@ Catégorie :"""
     return category if category in valid else "rag"
 
 
+def extract_expression(question: str, llm) -> str:
+    prompt = f"""Extrait uniquement l'expression mathématique de cette question.
+Réponds avec juste l'expression en notation Python (utilise ** pour les puissances, sqrt(), log(), exp(), sin(), cos()...).
+Ne donne aucune explication, juste l'expression.
+
+Question : {question}
+
+Expression :"""
+    response = llm.invoke(prompt)
+    return response.content.strip()
+
+
 def extract_city(question: str, llm) -> str:
     prompt = f"""Extrait uniquement le nom de la ville dans cette question. Réponds avec juste le nom de la ville, sans ponctuation ni explication.
 
@@ -61,7 +73,8 @@ def route_query(question, vectorstore, llm):
         return {"mode": "quiz", "result": make_quiz(vectorstore, llm, question)}
 
     elif mode == "calcul":
-        return {"mode": "calcul", "result": calculate(question)}
+        expression = extract_expression(question, llm)
+        return {"mode": "calcul", "result": calculate(expression)}
 
     elif mode == "météo":
         city = extract_city(question, llm)
