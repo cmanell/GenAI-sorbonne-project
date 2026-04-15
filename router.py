@@ -12,12 +12,18 @@ from tools import (
 
 
 def is_corpus_related(question: str, llm, corpus_files: list) -> bool:
-    """Vérifie en un appel binaire si la question est liée au corpus."""
+    """Vérifie si la question attend une réponse rédigée à partir du corpus."""
     file_list = "\n".join(f"- {f}" for f in corpus_files)
     prompt = f"""Tu disposes d'un corpus de documents :
 {file_list}
 
-La question suivante porte-t-elle sur un sujet couvert par l'un de ces documents ?
+La question suivante attend-elle une réponse rédigée à partir du contenu de ces documents ?
+Réponds NON si :
+- c'est une demande de reformulation, correction ou amélioration d'un texte fourni par l'utilisateur
+- c'est une demande de recherche d'un passage ou d'une source précise dans les documents
+- c'est une conversation générale (salutation, remerciement, etc.)
+Réponds OUI uniquement si la question appelle une réponse construite à partir du contenu des documents.
+
 Réponds uniquement par oui ou non.
 
 Question : {question}
