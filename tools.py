@@ -73,7 +73,7 @@ def weather_tool(city: str) -> str:
     try:
         resp = requests.get(f"https://wttr.in/{city}?format=3", timeout=5)
         resp.raise_for_status()
-        return resp.text
+        return resp.content.decode("utf-8")
     except Exception as e:
         return f"Weather error: {e}"
 
