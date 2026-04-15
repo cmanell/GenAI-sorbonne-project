@@ -12,7 +12,7 @@ GenAI-sorbonne-project/
 ├── app.py        # Interface Streamlit principale
 ├── RAG.py           # Pipeline RAG (ingestion, vectorisation, réponse)
 ├── router.py        # Routeur LLM automatique
-├── tools.py         # Outils : calculatrice, recherche web, résumé, quiz, doc_search
+├── tools.py         # Outils : calculatrice, recherche web, météo
 ├── data/            # Dossier du corpus (PDF, DOCX)
 ├── faiss_index/     # Index vectoriel FAISS (généré automatiquement)
 ├── .env             # Clé API Mistral (non versionné)
@@ -30,7 +30,7 @@ Document (PDF/DOCX)
 
 Question utilisateur
     → Routeur LLM (classify_query via Mistral)
-    → Outil sélectionné (RAG / Web / Calculatrice / Résumé / Quiz / Doc Search / Chat)
+    → Outil sélectionné (RAG / Doc Search / Calculatrice / Recherche web / Météo / Chat)
     → Réponse avec citations inline [fichier, p.X]
 ```
 
