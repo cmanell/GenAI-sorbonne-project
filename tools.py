@@ -6,7 +6,8 @@ from ddgs import DDGS
 
 def _extract_expression(text: str) -> str:
     text = text.replace(",", ".")
-    tokens = re.findall(r'[\d]+(?:\.\d+)?(?:[eE][+-]?\d+)?|[+\-*/()^]', text)
+    # Capture function names (letters followed by '('), numbers, and operators
+    tokens = re.findall(r'[a-zA-Z_]\w*(?=\s*\()|[\d]+(?:\.\d+)?(?:[eE][+-]?\d+)?|[+\-*/()^]', text)
     if not tokens:
         return ""
     return " ".join(tokens)
