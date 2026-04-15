@@ -229,6 +229,13 @@ def route_query(question: str, vectorstore, llm, history=None, k_docs: int = 4) 
                 history=history,
             )
 
+            return {
+                "route": "tool",
+                "tool": "web",
+                "result": final_answer,
+                "docs": [],
+                "extra": web_results if isinstance(web_results, list) else [],
+            }
 
         if tool_type == "meteo":
             city = extract_city_from_question(question)
