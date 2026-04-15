@@ -84,7 +84,21 @@ def search_web(query: str, max_results: int = 5):
     return results
 
 
-def extract_city_from_question(question: str) -> str:
+def extract_city_from_question(question: str, llm=None) -> str:
+    if llm:
+        prompt = f"""Extrais uniquement le nom de la ville mentionnée dans cette question météo.
+Réponds avec seulement le nom de la ville, sans ponctuation ni explication.
+Si aucune ville n'est mentionnée, réponds avec le mot "inconnu".
+
+Question : {question}
+
+Ville :"""
+        response = llm.invoke(prompt)
+        city = response.content.strip().strip("?.!,;:")
+        if city.lower() not in ("inconnu", ""):
+            return city
+
+    # Fallback regex
     q = question.strip()
 
     patterns = [
@@ -105,9 +119,8 @@ def extract_city_from_question(question: str) -> str:
     if city is None:
         city = q.strip(" ?.!,;:")
 
-    # Supprime les mots parasites
     city = re.sub(
-        r"\b(aujourd'hui|aujourdhui|today|maintenant|ce soir|demain|sur)\b",
+        r"\b(aujourd'hui|aujourdhui|today|maintenant|ce soir|ce moment|demain|sur)\b",
         "",
         city,
         flags=re.IGNORECASE,
@@ -127,25 +140,4 @@ def weather_tool(city: str) -> str:
     except Exception as e:
         return f"Weather error: {e}"
     
-
-def web_summary(llm, query: str):
-    results = search_web(query)
-    text = "\n\n".join(r["snippet"] for r in results if r.get("snippet"))
-
-    prompt = f"""
-    Tu es un assistant.
-    Résume les informations suivantes pour répondre à la question.
-
-    Informations :
-    {text}
-
-    Question :
-    {query}
-
-    Réponse en français :
-    """
-    response = llm.invoke(prompt)
-    return response.content, results
-
-
 

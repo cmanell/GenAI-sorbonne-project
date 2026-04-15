@@ -3,12 +3,13 @@ def init_memory(session_state):
         session_state.messages = []
 
 
-def add_message(session_state, role: str, content, route: str = "chat", docs=None, extra=None):
+def add_message(session_state, role: str, content, route: str = "chat", tool: str = None, docs=None, extra=None):
     session_state.messages.append(
         {
             "role": role,
             "content": content,
             "route": route,
+            "tool": tool,
             "docs": docs or [],
             "extra": extra or [],
         }
@@ -32,6 +33,11 @@ def format_history_for_prompt(history, limit: int = 6) -> str:
 
     for msg in selected:
         role = "Utilisateur" if msg["role"] == "user" else "Assistant"
-        lines.append(f"{role} : {msg['content']}")
+        content = msg["content"]
+        if isinstance(content, list):
+            content = " | ".join(
+                r.get("excerpt", "")[:120] for r in content if isinstance(r, dict)
+            )
+        lines.append(f"{role} : {content}")
 
     return "\n".join(lines)

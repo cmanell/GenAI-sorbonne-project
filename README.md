@@ -12,11 +12,11 @@ GenAI-sorbonne-project/
 ├── app.py        # Interface Streamlit principale
 ├── RAG.py           # Pipeline RAG (ingestion, vectorisation, réponse)
 ├── router.py        # Routeur LLM automatique
-├── tools.py         # Outils : calculatrice, recherche web, résumé, quiz, doc_search
+├── tools.py         # Outils : calculatrice, recherche web, météo
 ├── data/            # Dossier du corpus (PDF, DOCX)
 ├── faiss_index/     # Index vectoriel FAISS (généré automatiquement)
 ├── .env             # Clé API Mistral (non versionné)
-└── requirement.txt  # Dépendances Python
+└── requirements.txt  # Dépendances Python
 ```
 
 ### Flux de données
@@ -30,7 +30,7 @@ Document (PDF/DOCX)
 
 Question utilisateur
     → Routeur LLM (classify_query via Mistral)
-    → Outil sélectionné (RAG / Web / Calculatrice / Résumé / Quiz / Doc Search / Chat)
+    → Outil sélectionné (RAG / Doc Search / Calculatrice / Recherche web / Météo / Chat)
     → Réponse avec citations inline [fichier, p.X]
 ```
 
@@ -68,7 +68,7 @@ source .venv/bin/activate  # Linux/Mac
 ### 3. Installer les dépendances
 
 ```bash
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Configurer la clé API
@@ -90,7 +90,7 @@ Place tes fichiers PDF ou DOCX dans le dossier `data/`.
 ### Interface Streamlit
 
 ```bash
-streamlit run ragass.py
+streamlit run app.py
 ```
 
 Ouvre ensuite [http://localhost:8501](http://localhost:8501), puis clique sur **"🔄 Reconstruire l'index"** dans la sidebar pour indexer le corpus.
@@ -117,4 +117,4 @@ Le modèle Mistral est sélectionnable dans la sidebar de l'interface :
 
 - `mistral-small-latest` (défaut, rapide)
 - `mistral-large-latest` (plus performant)
-- `open-mistral-7b` (open source)
+- `mistral-medium-latest` (intermédiaire)

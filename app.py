@@ -13,7 +13,7 @@ from memory import init_memory, add_message, clear_memory, get_history
 
 load_dotenv()
 
-APP_TITLE = "GPCR Research Assistant"
+APP_TITLE = "Thesis Research Assistant"
 DEFAULT_DATA_DIR = "data"
 DEFAULT_INDEX_DIR = "faiss_index"
 DEFAULT_LLM_MODEL = "mistral-small-latest"
@@ -23,6 +23,12 @@ ROUTE_LABELS = {
     "rag": "Réponse sur documents",
     "doc_search": "Recherche documentaire",
     "tool": "Outil",
+}
+
+TOOL_LABELS = {
+    "calcul": "Calcul",
+    "web": "Recherche web",
+    "meteo": "Météo",
 }
 
 # =========================================================
@@ -207,7 +213,7 @@ with st.sidebar:
 
     llm_model = st.selectbox(
         "Modèle Mistral",
-        ["mistral-small-latest", "mistral-large-latest", "open-mistral-7b"],
+        ["mistral-small-latest", "mistral-large-latest", "mistral-medium-latest"],
         index=0,
     )
 
@@ -335,9 +341,11 @@ if run_btn and query.strip():
                 llm=llm,
                 history=history,
                 k_docs=k_docs,
+                folder_path=folder_path,
             )
 
             route_name = routed.get("route", "chat")
+            tool_name = routed.get("tool")
             result = routed.get("result", "")
             docs = routed.get("docs", [])
             extra = routed.get("extra", [])
@@ -347,6 +355,7 @@ if run_btn and query.strip():
                 "assistant",
                 result,
                 route=route_name,
+                tool=tool_name,
                 docs=docs,
                 extra=extra,
             )
@@ -370,7 +379,10 @@ with tab_result:
         if last_assistant is None:
             st.info("Aucune réponse assistant disponible.")
         else:
-            label = ROUTE_LABELS.get(last_assistant["route"], last_assistant["route"])
+            if last_assistant["route"] == "tool" and last_assistant.get("tool"):
+                label = TOOL_LABELS.get(last_assistant["tool"], last_assistant["tool"].capitalize())
+            else:
+                label = ROUTE_LABELS.get(last_assistant["route"], last_assistant["route"])
             st.markdown(f"<div class='route-tag'>{label}</div>", unsafe_allow_html=True)
 
             if last_assistant["route"] == "doc_search" and isinstance(last_assistant["content"], list):
@@ -381,7 +393,7 @@ with tab_result:
             if last_assistant.get("docs"):
                 render_sources(last_assistant["docs"])
 
-            if last_assistant.get("extra"):
+            if last_assistant.get("tool") == "web" and last_assistant.get("extra"):
                 render_web_results(last_assistant["extra"])
 
 # =========================================================
@@ -395,7 +407,10 @@ with tab_history:
         for msg in st.session_state.messages:
             with st.chat_message("user" if msg["role"] == "user" else "assistant"):
                 if msg["role"] == "assistant":
-                    label = ROUTE_LABELS.get(msg["route"], msg["route"])
+                    if msg["route"] == "tool" and msg.get("tool"):
+                        label = TOOL_LABELS.get(msg["tool"], msg["tool"].capitalize())
+                    else:
+                        label = ROUTE_LABELS.get(msg["route"], msg["route"])
                     st.markdown(f"<div class='route-tag'>{label}</div>", unsafe_allow_html=True)
 
                 if msg["route"] == "doc_search" and isinstance(msg["content"], list):
@@ -406,7 +421,7 @@ with tab_history:
                 if msg.get("docs"):
                     render_sources(msg["docs"])
 
-                if msg.get("extra"):
+                if msg.get("tool") == "web" and msg.get("extra"):
                     render_web_results(msg["extra"])
 
 # =========================================================
