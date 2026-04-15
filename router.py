@@ -238,8 +238,7 @@ def route_query(question: str, vectorstore, llm, history=None, k_docs: int = 4, 
             }
 
         if tool_type == "meteo":
-            city = extract_city_from_question(question)
-            print("VILLE EXTRAITE =", city)
+            city = extract_city_from_question(question, llm=llm)
         
             if not city:
                 tool_output = "Impossible de déterminer la ville demandée."
