@@ -81,15 +81,6 @@ def load_vectorstore(index_dir: str):
     )
 
 
-def build_or_load_vectorstore(chunks: List[Document], index_dir: str):
-    index_path = Path(index_dir)
-
-    if index_path.exists():
-        return load_vectorstore(index_dir)
-
-    return build_vectorstore(chunks, index_dir)
-
-
 def rebuild_index(folder_path: str, index_dir: str, chunk_size: int, chunk_overlap: int):
     index_path = Path(index_dir)
     if index_path.exists():
