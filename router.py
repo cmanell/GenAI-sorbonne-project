@@ -1,5 +1,4 @@
 import os
-import re
 
 from langchain_mistralai import ChatMistralAI
 from tools import search_web, search_documents, summarize_document, make_quiz, calculate
@@ -51,9 +50,7 @@ def route_query(question, vectorstore, llm):
         return {"mode": "quiz", "result": make_quiz(vectorstore, llm, question)}
 
     elif mode == "calcul":
-        match = re.search(r"[\d+\-*/().^, ]+", question)
-        expression = match.group().strip() if match else question
-        return {"mode": "calcul", "result": calculate(expression)}
+        return {"mode": "calcul", "result": calculate(question)}
 
     elif mode == "chat":
         response = llm.invoke(question)
