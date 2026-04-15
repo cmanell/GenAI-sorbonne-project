@@ -25,6 +25,12 @@ ROUTE_LABELS = {
     "tool": "Outil",
 }
 
+TOOL_LABELS = {
+    "calcul": "Calcul",
+    "web": "Recherche web",
+    "meteo": "Météo",
+}
+
 # =========================================================
 # PAGE
 # =========================================================
@@ -372,7 +378,10 @@ with tab_result:
         if last_assistant is None:
             st.info("Aucune réponse assistant disponible.")
         else:
-            label = ROUTE_LABELS.get(last_assistant["route"], last_assistant["route"])
+            if last_assistant["route"] == "tool" and last_assistant.get("tool"):
+                label = TOOL_LABELS.get(last_assistant["tool"], last_assistant["tool"].capitalize())
+            else:
+                label = ROUTE_LABELS.get(last_assistant["route"], last_assistant["route"])
             st.markdown(f"<div class='route-tag'>{label}</div>", unsafe_allow_html=True)
 
             if last_assistant["route"] == "doc_search" and isinstance(last_assistant["content"], list):
@@ -397,7 +406,10 @@ with tab_history:
         for msg in st.session_state.messages:
             with st.chat_message("user" if msg["role"] == "user" else "assistant"):
                 if msg["role"] == "assistant":
-                    label = ROUTE_LABELS.get(msg["route"], msg["route"])
+                    if msg["route"] == "tool" and msg.get("tool"):
+                        label = TOOL_LABELS.get(msg["tool"], msg["tool"].capitalize())
+                    else:
+                        label = ROUTE_LABELS.get(msg["route"], msg["route"])
                     st.markdown(f"<div class='route-tag'>{label}</div>", unsafe_allow_html=True)
 
                 if msg["route"] == "doc_search" and isinstance(msg["content"], list):
