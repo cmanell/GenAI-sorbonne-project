@@ -10,4 +10,3 @@ pypdf
 docx2txt
 ddgs
 requests
-torchvision
