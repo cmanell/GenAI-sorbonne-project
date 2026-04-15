@@ -16,7 +16,7 @@ GenAI-sorbonne-project/
 ├── data/            # Dossier du corpus (PDF, DOCX)
 ├── faiss_index/     # Index vectoriel FAISS (généré automatiquement)
 ├── .env             # Clé API Mistral (non versionné)
-└── requirement.txt  # Dépendances Python
+└── requirements.txt  # Dépendances Python
 ```
 
 ### Flux de données
@@ -68,7 +68,7 @@ source .venv/bin/activate  # Linux/Mac
 ### 3. Installer les dépendances
 
 ```bash
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Configurer la clé API
@@ -90,7 +90,7 @@ Place tes fichiers PDF ou DOCX dans le dossier `data/`.
 ### Interface Streamlit
 
 ```bash
-streamlit run ragass.py
+streamlit run app.py
 ```
 
 Ouvre ensuite [http://localhost:8501](http://localhost:8501), puis clique sur **"🔄 Reconstruire l'index"** dans la sidebar pour indexer le corpus.
