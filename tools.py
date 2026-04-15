@@ -33,17 +33,29 @@ SAFE_LOCALS = {
     "e": math.e,
 }
 
+ALLOWED_FUNCTION_NAMES = {
+    "exp", "sqrt", "sin", "cos", "tan", "log", "log10", "abs", "pi", "e"
+}
 
 def extract_math_expression(text: str) -> str:
     cleaned = text.replace(",", ".").lower()
 
-    matches = re.findall(
+    tokens = re.findall(
         r"[a-zA-Z_][a-zA-Z0-9_]*|\d+(?:\.\d+)?|[+\-*/%(),]",
         cleaned
     )
-    expression = "".join(matches).strip()
 
-    return expression if expression else text.strip()
+    filtered_tokens = []
+    for token in tokens:
+        if re.fullmatch(r"\d+(?:\.\d+)?", token):
+            filtered_tokens.append(token)
+        elif token in {"+", "-", "*", "/", "%", "(", ")", ","}:
+            filtered_tokens.append(token)
+        elif token in ALLOWED_FUNCTION_NAMES:
+            filtered_tokens.append(token)
+
+    expression = "".join(filtered_tokens).strip()
+    return expression
 
 
 def calculate(expression: str) -> str:
@@ -70,6 +82,42 @@ def search_web(query: str, max_results: int = 5):
             )
 
     return results
+
+
+def extract_city_from_question(question: str) -> str:
+    q = question.strip()
+
+    patterns = [
+        r"(?:météo|meteo|temps)\s+(?:à|a|de|d'|sur)\s+([A-Za-zÀ-ÿ\- ]+)",
+        r"(?:quel temps fait[- ]il|quelle est la météo|quelle est la meteo)\s+(?:à|a|de|d'|sur)\s+([A-Za-zÀ-ÿ\- ]+)",
+        r"(?:météo|meteo)\s+([A-Za-zÀ-ÿ\- ]+)",
+        r"(?:météo|meteo).*(?:sur|à|a|de|d')\s+([A-Za-zÀ-ÿ\- ]+)",
+    ]
+
+    city = None
+
+    for pattern in patterns:
+        match = re.search(pattern, q, re.IGNORECASE)
+        if match:
+            city = match.group(1).strip(" ?.!,;:")
+            break
+
+    if city is None:
+        city = q.strip(" ?.!,;:")
+
+    # Supprime les mots parasites
+    city = re.sub(
+        r"\b(aujourd'hui|aujourdhui|today|maintenant|ce soir|demain|sur)\b",
+        "",
+        city,
+        flags=re.IGNORECASE,
+    )
+    city = re.sub(r"^(de|d'|à|a|sur)\s+", "", city, flags=re.IGNORECASE)
+    city = re.sub(r"\s+", " ", city).strip()
+
+    return city
+
+
 
 def weather_tool(city: str) -> str:
     try:
