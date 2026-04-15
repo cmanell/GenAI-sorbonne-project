@@ -1,5 +1,4 @@
 from typing import Dict, Any
-import re
 import RAG
 
 from memory import format_history_for_prompt
@@ -8,34 +7,8 @@ from tools import (
     calculate,
     search_web,
     weather_tool,
+    extract_city_from_question,
 )
-
-
-def extract_city_from_question(question: str) -> str:
-    q = question.strip()
-
-    patterns = [
-        r"(?:météo|meteo|temps)\s+(?:à|a|de|d')\s+([A-Za-zÀ-ÿ\- ]+)",
-        r"(?:quel temps fait[- ]il|quelle est la météo|quelle est la meteo)\s+(?:à|a|de|d')\s+([A-Za-zÀ-ÿ\- ]+)",
-        r"(?:météo|meteo)\s+([A-Za-zÀ-ÿ\- ]+)",
-    ]
-
-    city = None
-
-    for pattern in patterns:
-        match = re.search(pattern, q, re.IGNORECASE)
-        if match:
-            city = match.group(1).strip(" ?.!,;:")
-            break
-
-    if city is None:
-        city = q.strip(" ?.!,;:")
-
-    city = re.sub(r"\b(aujourd'hui|aujourdhui|today|maintenant|ce soir|demain)\b", "", city, flags=re.IGNORECASE)
-    city = re.sub(r"^(de|d'|à|a)\s+", "", city, flags=re.IGNORECASE)
-    city = re.sub(r"\s+", " ", city).strip()
-
-    return city
 
 
 def classify_query(question: str, llm, has_vectorstore: bool = True) -> str:
