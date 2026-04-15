@@ -33,6 +33,11 @@ def format_history_for_prompt(history, limit: int = 6) -> str:
 
     for msg in selected:
         role = "Utilisateur" if msg["role"] == "user" else "Assistant"
-        lines.append(f"{role} : {msg['content']}")
+        content = msg["content"]
+        if isinstance(content, list):
+            content = " | ".join(
+                r.get("excerpt", "")[:120] for r in content if isinstance(r, dict)
+            )
+        lines.append(f"{role} : {content}")
 
     return "\n".join(lines)
