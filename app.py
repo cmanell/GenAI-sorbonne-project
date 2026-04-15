@@ -341,6 +341,7 @@ if run_btn and query.strip():
                 llm=llm,
                 history=history,
                 k_docs=k_docs,
+                folder_path=folder_path,
             )
 
             route_name = routed.get("route", "chat")

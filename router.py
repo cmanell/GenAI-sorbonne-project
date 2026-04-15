@@ -11,12 +11,18 @@ from tools import (
 )
 
 
-def classify_query(question: str, llm, has_vectorstore: bool = True) -> str:
-    rag_hint = (
-        "rag : si la question semble dépendre du corpus/documentation locale."
-        if has_vectorstore
-        else "chat : si la question nécessiterait des documents mais qu'aucun index n'est prêt."
-    )
+def classify_query(question: str, llm, has_vectorstore: bool = True, corpus_files: list = None) -> str:
+    if not has_vectorstore:
+        rag_hint = "Aucun index documentaire n'est disponible : n'utilise jamais rag ni doc_search."
+    elif corpus_files:
+        file_list = "\n".join(f"- {f}" for f in corpus_files)
+        rag_hint = (
+            f"Un corpus de documents est indexé. Voici les fichiers disponibles :\n{file_list}\n\n"
+            "Utilise rag si la question porte sur un sujet couvert par ces documents.\n"
+            "Utilise doc_search si l'utilisateur cherche un passage ou une source sans vouloir une réponse rédigée."
+        )
+    else:
+        rag_hint = "Un corpus de documents est indexé. Utilise rag si la question semble liée aux documents chargés."
 
     prompt = f"""
     Tu es un routeur intelligent.
@@ -28,14 +34,14 @@ def classify_query(question: str, llm, has_vectorstore: bool = True) -> str:
     - chat
 
     Règles :
-    - tool : si la question nécessite l'usage d'un outil, comme un calcul, une météo, une recherche web, ou une recherche factuelle sur une personne, un lieu, un événement, un pays, une date, une définition, ou une information générale.
-    - doc_search : si l'utilisateur veut retrouver un document, une source, un passage, une page, ou chercher dans les documents sans demander une réponse rédigée.
-    - rag : si l'utilisateur pose une question dont la réponse doit être trouvée dans les documents.
-    - chat : pour une conversation générale, reformulation, aide rédactionnelle, avis, ou discussion qui ne nécessite ni outil ni documents.
+    - tool : calcul mathématique, météo, ou recherche web sur un fait extérieur au corpus (actualité, personne publique, événement mondial, définition générale).
+    - doc_search : l'utilisateur veut retrouver un passage, une source, une page dans les documents sans demander de réponse rédigée.
+    - rag : la question porte sur un sujet traité dans le corpus (voir liste ci-dessous). Privilégie rag dès qu'un des fichiers du corpus semble pertinent.
+    - chat : conversation générale, reformulation, aide rédactionnelle, ou sujet sans lien avec le corpus ni besoin d'outil.
 
     Important :
-    - Une question comme "qui est Nelson Mandela", "qu'est-ce que la photosynthèse", "quelle est la capitale du Pérou", "parle-moi de Victor Hugo" doit aller vers tool.
-    - Une simple conversation comme "bonjour", "merci", "peux-tu reformuler", "explique-moi simplement ce texte" doit aller vers chat.
+    - Si le sujet de la question correspond à un fichier du corpus, choisis rag, même si la question ne mentionne pas explicitement "les documents".
+    - Une simple conversation comme "bonjour", "merci", "peux-tu reformuler" doit aller vers chat.
 
     {rag_hint}
 
@@ -134,9 +140,10 @@ def answer_tool_result(question: str, tool_name: str, tool_result: str, llm, his
     return response.content
 
 
-def route_query(question: str, vectorstore, llm, history=None, k_docs: int = 4) -> Dict[str, Any]:
+def route_query(question: str, vectorstore, llm, history=None, k_docs: int = 4, folder_path: str = "data") -> Dict[str, Any]:
     has_vectorstore = vectorstore is not None
-    route = classify_query(question, llm, has_vectorstore=has_vectorstore)
+    corpus_files = [p.name for p in RAG.list_supported_files(folder_path)] if has_vectorstore else []
+    route = classify_query(question, llm, has_vectorstore=has_vectorstore, corpus_files=corpus_files)
 
     if route == "tool":
         tool_type = detect_tool_type(question, llm)
