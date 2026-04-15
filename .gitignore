@@ -3,3 +3,4 @@
 Data/
 output/
 faiss_index/
+__pycache__/

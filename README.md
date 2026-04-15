@@ -9,11 +9,10 @@ Assistant scientifique spécialisé dans les récepteurs FFA/GPCR, combinant un 
 
 ```
 GenAI-sorbonne-project/
-├── ragass.py        # Interface Streamlit principale
+├── app.py        # Interface Streamlit principale
 ├── RAG.py           # Pipeline RAG (ingestion, vectorisation, réponse)
 ├── router.py        # Routeur LLM automatique
 ├── tools.py         # Outils : calculatrice, recherche web, résumé, quiz, doc_search
-├── app.py           # Interface CLI (alternative à Streamlit)
 ├── data/            # Dossier du corpus (PDF, DOCX)
 ├── faiss_index/     # Index vectoriel FAISS (généré automatiquement)
 ├── .env             # Clé API Mistral (non versionné)
@@ -37,24 +36,11 @@ Question utilisateur
 
 ---
 
-## Fonctionnalités
 
-| Mode | Description |
-|---|---|
-| 🤖 Auto | Détection automatique du mode via le LLM |
-| 🧠 Question-réponse | Réponse RAG à partir du corpus avec citations inline |
-| 📁 Recherche de documents | Retrouve les passages et fichiers pertinents |
-| 📝 Résumé | Résume un thème ou un ensemble de documents |
-| ❓ Quiz | Génère des questions de révision avec corrigé |
-| 🌐 Recherche web | Complète le corpus avec DuckDuckGo |
-| 🧮 Calculatrice | Évalue des expressions arithmétiques |
-| 💬 Conversation | Discussion libre sans RAG ni outils |
 
 ### Mémoire conversationnelle
 Les 6 derniers messages sont injectés dans chaque prompt pour contextualiser les réponses.
 
-### Routage automatique
-Le mode **Auto** envoie la question au LLM Mistral qui la classe parmi 7 catégories et dispatch vers l'outil approprié — sans intervention de l'utilisateur.
 
 ---
 
@@ -109,13 +95,7 @@ streamlit run ragass.py
 
 Ouvre ensuite [http://localhost:8501](http://localhost:8501), puis clique sur **"🔄 Reconstruire l'index"** dans la sidebar pour indexer le corpus.
 
-### Interface CLI
 
-```bash
-python app.py
-```
-
----
 
 ## Dépendances principales
 

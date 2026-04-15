@@ -7,6 +7,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
+from memory import format_history_for_prompt
+
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 
@@ -128,7 +130,6 @@ def generate_answer(question: str, docs, llm, history=None) -> str:
         return "Je ne trouve pas d'information pertinente dans les documents."
 
     context = "\n\n".join(doc.page_content for doc in docs)
-
     history_text = format_history_for_prompt(history, limit=6)
 
     prompt = f"""

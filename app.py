@@ -1,10 +1,11 @@
 import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
-from router import route_query
+
 import RAG
+from router import route_query
 from tools import get_llm
-from memory import init_memory, add_message, clear_memory, get_history, format_history_for_prompt
+from memory import init_memory, add_message, clear_memory, get_history
 
 # =========================================================
 # CONFIG
@@ -17,6 +18,12 @@ DEFAULT_DATA_DIR = "data"
 DEFAULT_INDEX_DIR = "faiss_index"
 DEFAULT_LLM_MODEL = "mistral-small-latest"
 
+ROUTE_LABELS = {
+    "chat": "Discussion",
+    "rag": "Réponse sur documents",
+    "doc_search": "Recherche documentaire",
+    "tool": "Outil",
+}
 
 # =========================================================
 # PAGE
@@ -28,7 +35,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
 
 # =========================================================
 # STYLE
@@ -89,7 +95,7 @@ st.markdown(
             background: rgba(120,120,120,0.03);
             text-align: center;
         }
-        .mode-tag {
+        .route-tag {
             display: inline-block;
             font-size: 0.78rem;
             font-weight: 600;
@@ -103,13 +109,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
 # =========================================================
 # MEMORY
 # =========================================================
 
 init_memory(st.session_state)
-
 
 # =========================================================
 # SESSION STATE
@@ -121,12 +125,8 @@ if "vectorstore" not in st.session_state:
 if "index_ready" not in st.session_state:
     st.session_state.index_ready = False
 
-if "active_mode" not in st.session_state:
-    st.session_state.active_mode = "Auto"
-
 if "corpus_stats" not in st.session_state:
     st.session_state.corpus_stats = None
-
 
 # =========================================================
 # CACHE
@@ -135,7 +135,6 @@ if "corpus_stats" not in st.session_state:
 @st.cache_resource(show_spinner=False)
 def cached_llm(model_name: str):
     return get_llm(model_name)
-
 
 # =========================================================
 # HELPERS UI
@@ -162,7 +161,6 @@ def render_sources(docs):
                 unsafe_allow_html=True,
             )
 
-
 def render_doc_search_results(results):
     if not results:
         st.info("Aucun document pertinent trouvé.")
@@ -180,7 +178,6 @@ def render_doc_search_results(results):
             unsafe_allow_html=True,
         )
 
-
 def render_web_results(results):
     if not results:
         return
@@ -197,7 +194,6 @@ def render_web_results(results):
                 """,
                 unsafe_allow_html=True,
             )
-
 
 # =========================================================
 # SIDEBAR
@@ -219,7 +215,6 @@ with st.sidebar:
     chunk_overlap = st.slider("Chunk overlap", 50, 400, 200, 25)
     k_docs = st.slider("Top-k passages", 2, 8, 4)
 
-
     st.markdown("---")
     build_btn = st.button("🔄 Reconstruire l'index", use_container_width=True)
     clear_btn = st.button("🧹 Vider l'historique", use_container_width=True)
@@ -234,7 +229,6 @@ with st.sidebar:
 
     if len(files) > 8:
         st.caption(f"+ {len(files) - 8} autres")
-
 
 # =========================================================
 # ACTIONS SIDEBAR
@@ -270,7 +264,6 @@ if st.session_state.vectorstore is None and Path(index_dir).exists():
     except Exception:
         pass
 
-
 # =========================================================
 # HEADER
 # =========================================================
@@ -301,14 +294,10 @@ if st.session_state.corpus_stats:
 
 st.markdown("---")
 
-
 left, right = st.columns([2.2, 1])
 
 with left:
-    query = st.text_area(
-        "Requête",
-        height=110,
-    )
+    query = st.text_area("Requête", height=110)
 
 with right:
     st.markdown(
@@ -316,7 +305,7 @@ with right:
         <div class='soft-card'>
             <strong>Conseil</strong><br>
             <span class='tiny'>
-                Utilise des formulations explicites. En recherche documentaire, précise le thème ou le mot-clé.
+                Le routeur choisit automatiquement entre outil, documents ou discussion.
             </span>
         </div>
         """,
@@ -326,95 +315,78 @@ with right:
 
 st.markdown("---")
 
-
-# =========================================================
-# TABS
-# =========================================================
-
 tab_result, tab_history, tab_corpus = st.tabs(["Résultat", "Historique", "Corpus"])
 
+# =========================================================
+# RUN QUERY
+# =========================================================
+
+llm = cached_llm(llm_model)
+
+if run_btn and query.strip():
+    add_message(st.session_state, "user", query, route="user")
+    history = get_history(st.session_state, limit=6)
+
+    with st.spinner("Analyse de la requête..."):
+        try:
+            routed = route_query(
+                question=query,
+                vectorstore=st.session_state.vectorstore,
+                llm=llm,
+                history=history,
+                k_docs=k_docs,
+            )
+
+            route_name = routed.get("route", "chat")
+            result = routed.get("result", "")
+            docs = routed.get("docs", [])
+            extra = routed.get("extra", [])
+
+            add_message(
+                st.session_state,
+                "assistant",
+                result,
+                route=route_name,
+                docs=docs,
+                extra=extra,
+            )
+        except Exception as e:
+            st.error(f"Erreur pendant la requête : {e}")
+
+# =========================================================
+# TAB RESULT
+# =========================================================
+
 with tab_result:
-    if run_btn:
-        llm = cached_llm(llm_model)
-        selected_mode_key = MODE_CONFIG[st.session_state.active_mode]["key"]
-
-        add_message(st.session_state, "user", query, mode=selected_mode_key)
-
-        with st.spinner("Traitement en cours..."):
-            try:
-                history = get_history(st.session_state)
-
-                if selected_mode_key == "auto":
-                    response = route_query(
-                        question=query,
-                        vectorstore=st.session_state.vectorstore,
-                        llm=llm,
-                        history=history,
-                        k_docs=k_docs,
-                    )
-                    detected_mode = response["mode"]
-                    detected_label = next(
-                        (label for label, cfg in MODE_CONFIG.items() if cfg["key"] == detected_mode),
-                        detected_mode,
-                    )
-                    st.info(f"Mode détecté : {detected_label}")
-                else:
-                    response = route_query(
-                        question=query,
-                        vectorstore=st.session_state.vectorstore,
-                        llm=llm,
-                        history=history,
-                        k_docs=k_docs,
-                    )
-                    response["mode"] = selected_mode_key
-
-                mode = response["mode"]
-                pretty_label = next(
-                    (label for label, cfg in MODE_CONFIG.items() if cfg["key"] == mode),
-                    mode,
-                )
-
-                st.markdown(f"<div class='mode-tag'>{pretty_label}</div>", unsafe_allow_html=True)
-
-                if mode == "doc_search":
-                    render_doc_search_results(response["result"])
-                    add_message(
-                        st.session_state,
-                        "assistant",
-                        str(response["result"]),
-                        mode=mode,
-                    )
-                else:
-                    st.markdown(response["result"])
-
-                    if response.get("docs"):
-                        render_sources(response["docs"])
-
-                    if response.get("extra"):
-                        render_web_results(response["extra"])
-
-                    add_message(
-                        st.session_state,
-                        "assistant",
-                        response["result"],
-                        mode=mode,
-                        docs=response.get("docs", []),
-                        extra=response.get("extra", []),
-                    )
-
-            except Exception as e:
-                st.error(f"Erreur : {e}")
-                add_message(
-                    st.session_state,
-                    "assistant",
-                    f"Erreur : {e}",
-                    mode="chat",
-                )
+    if not st.session_state.messages:
+        st.info("Aucun résultat pour le moment.")
     else:
-        st.markdown(
-            "<div class='soft-card'>Lance une requête pour voir le résultat ici.</div>",
-            unsafe_allow_html=True,
-        )
+        last_assistant = None
+        for msg in reversed(st.session_state.messages):
+            if msg["role"] == "assistant":
+                last_assistant = msg
+                break
+
+        if last_assistant is None:
+            st.info("Aucune réponse assistant disponible.")
+        else:
+            label = ROUTE_LABELS.get(last_assistant["route"], last_assistant["route"])
+            st.markdown(f"<div class='route-tag'>{label}</div>", unsafe_allow_html=True)
+
+            if last_assistant["route"] == "doc_search" and isinstance(last_assistant["content"], list):
+                render_doc_search_results(last_assistant["content"])
+            else:
+                st.markdown(last_assistant["content"])
+
+            if last_assistant.get("docs"):
+                render_sources(last_assistant["docs"])
+
+            if last_assistant.get("extra"):
+                render_web_results(last_assistant["extra"])
+
+# =========================================================
+# TAB HISTORY
+# =========================================================
 
 with tab_history:
     if not st.session_state.messages:
@@ -423,19 +395,23 @@ with tab_history:
         for msg in st.session_state.messages:
             with st.chat_message("user" if msg["role"] == "user" else "assistant"):
                 if msg["role"] == "assistant":
-                    pretty = next(
-                        (label for label, cfg in MODE_CONFIG.items() if cfg["key"] == msg["mode"]),
-                        msg["mode"],
-                    )
-                    st.markdown(f"<div class='mode-tag'>{pretty}</div>", unsafe_allow_html=True)
+                    label = ROUTE_LABELS.get(msg["route"], msg["route"])
+                    st.markdown(f"<div class='route-tag'>{label}</div>", unsafe_allow_html=True)
 
-                st.markdown(msg["content"])
+                if msg["route"] == "doc_search" and isinstance(msg["content"], list):
+                    render_doc_search_results(msg["content"])
+                else:
+                    st.markdown(msg["content"])
 
                 if msg.get("docs"):
                     render_sources(msg["docs"])
 
                 if msg.get("extra"):
                     render_web_results(msg["extra"])
+
+# =========================================================
+# TAB CORPUS
+# =========================================================
 
 with tab_corpus:
     if not files:
