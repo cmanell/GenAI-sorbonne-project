@@ -37,6 +37,10 @@ def calculate(expression: str) -> str:
             result = numexpr.evaluate(_to_numexpr(cleaned), local_dict=_CONSTANTS)
 
         value = result.item() if hasattr(result, "item") else result
+        if isinstance(value, float) and math.isnan(value):
+            return "Erreur de calcul : résultat non défini (ex. racine d'un nombre négatif)"
+        if isinstance(value, float) and math.isinf(value):
+            return "Erreur de calcul : résultat infini"
         if isinstance(value, float) and value.is_integer():
             return str(int(value))
         return str(round(value, 10))
