@@ -434,7 +434,9 @@ def dispatch_mode(mode_key: str, query: str, llm, vectorstore, k_docs: int, mode
 
     elif mode_key == "météo":
         from tools import weather_tool
-        result = weather_tool(query)
+        from router import extract_city
+        city = extract_city(query, llm)
+        result = weather_tool(city)
         st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
         st.markdown(f"**{result}**")
         add_message("assistant", result, mode=mode_key)

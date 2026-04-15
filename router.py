@@ -35,6 +35,16 @@ Catégorie :"""
     return category if category in valid else "rag"
 
 
+def extract_city(question: str, llm) -> str:
+    prompt = f"""Extrait uniquement le nom de la ville dans cette question. Réponds avec juste le nom de la ville, sans ponctuation ni explication.
+
+Question : {question}
+
+Ville :"""
+    response = llm.invoke(prompt)
+    return response.content.strip()
+
+
 def route_query(question, vectorstore, llm):
     mode = classify_query(question, llm)
 
@@ -54,7 +64,7 @@ def route_query(question, vectorstore, llm):
         return {"mode": "calcul", "result": calculate(question)}
 
     elif mode == "météo":
-        city = question.strip()
+        city = extract_city(question, llm)
         return {"mode": "météo", "result": weather_tool(city)}
 
     elif mode == "chat":
