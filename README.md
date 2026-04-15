@@ -117,4 +117,4 @@ Le modèle Mistral est sélectionnable dans la sidebar de l'interface :
 
 - `mistral-small-latest` (défaut, rapide)
 - `mistral-large-latest` (plus performant)
-- `open-mistral-7b` (open source)
+- `mistral-medium-latest` (intermédiaire)

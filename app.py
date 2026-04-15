@@ -213,7 +213,7 @@ with st.sidebar:
 
     llm_model = st.selectbox(
         "Modèle Mistral",
-        ["mistral-small-latest", "mistral-large-latest", "open-mistral-7b"],
+        ["mistral-small-latest", "mistral-large-latest", "mistral-medium-latest"],
         index=0,
     )
 
