@@ -11,6 +11,22 @@ from tools import (
 )
 
 
+def is_corpus_related(question: str, llm, corpus_files: list) -> bool:
+    """Vérifie en un appel binaire si la question est liée au corpus."""
+    file_list = "\n".join(f"- {f}" for f in corpus_files)
+    prompt = f"""Tu disposes d'un corpus de documents :
+{file_list}
+
+La question suivante porte-t-elle sur un sujet couvert par l'un de ces documents ?
+Réponds uniquement par oui ou non.
+
+Question : {question}
+
+Réponse :"""
+    response = llm.invoke(prompt)
+    return response.content.strip().lower().startswith("oui")
+
+
 def classify_query(question: str, llm, has_vectorstore: bool = True, corpus_files: list = None) -> str:
     if not has_vectorstore:
         rag_hint = "Aucun index documentaire n'est disponible : n'utilise jamais rag ni doc_search."
@@ -143,7 +159,11 @@ def answer_tool_result(question: str, tool_name: str, tool_result: str, llm, his
 def route_query(question: str, vectorstore, llm, history=None, k_docs: int = 4, folder_path: str = "data") -> Dict[str, Any]:
     has_vectorstore = vectorstore is not None
     corpus_files = [p.name for p in RAG.list_supported_files(folder_path)] if has_vectorstore else []
-    route = classify_query(question, llm, has_vectorstore=has_vectorstore, corpus_files=corpus_files)
+
+    if has_vectorstore and corpus_files and is_corpus_related(question, llm, corpus_files):
+        route = "rag"
+    else:
+        route = classify_query(question, llm, has_vectorstore=has_vectorstore, corpus_files=corpus_files)
 
     if route == "tool":
         tool_type = detect_tool_type(question, llm)
