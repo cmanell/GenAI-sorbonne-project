@@ -1,6 +1,7 @@
 import re
 
 import numexpr
+import requests
 from ddgs import DDGS
 
 
@@ -66,6 +67,15 @@ def make_quiz(vectorstore, llm, query, k=4):
     prompt = f"Génère 3 questions de révision à partir du texte suivant :\n\n{text}"
     response = llm.invoke(prompt)
     return response.content
+
+
+def weather_tool(city: str) -> str:
+    try:
+        resp = requests.get(f"https://wttr.in/{city}?format=3", timeout=5)
+        resp.raise_for_status()
+        return resp.text
+    except Exception as e:
+        return f"Weather error: {e}"
 
 
 def search_web(query: str, max_results: int = 5):

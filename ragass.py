@@ -65,6 +65,11 @@ MODE_CONFIG = {
         "emoji": "🧮",
         "desc": "Effectuer un calcul arithmétique.",
     },
+    "Météo": {
+        "key": "météo",
+        "emoji": "🌤️",
+        "desc": "Obtenir la météo actuelle d'une ville.",
+    },
     "Conversation": {
         "key": "chat",
         "emoji": "💬",
@@ -427,6 +432,13 @@ def dispatch_mode(mode_key: str, query: str, llm, vectorstore, k_docs: int, mode
         st.markdown(f"**{result}**")
         add_message("assistant", result, mode=mode_key)
 
+    elif mode_key == "météo":
+        from tools import weather_tool
+        result = weather_tool(query)
+        st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)
+        st.markdown(f"**{result}**")
+        add_message("assistant", result, mode=mode_key)
+
     elif mode_key == "chat":
         history_text = ""
         for msg in st.session_state.messages[-6:]:
@@ -620,6 +632,7 @@ examples = {
     "Quiz": "Fais-moi un quiz sur FFA4",
     "Recherche web": "Cherche sur internet FFA4 receptor inflammation",
     "Calculatrice": "Calcule 3.14 * 6.5 * 6.5",
+    "Météo": "Paris",
     "Conversation": "Bonjour, que peux-tu faire pour moi ?",
 }
 

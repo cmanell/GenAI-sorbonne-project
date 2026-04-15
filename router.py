@@ -1,7 +1,7 @@
 import os
 
 from langchain_mistralai import ChatMistralAI
-from tools import search_web, search_documents, summarize_document, make_quiz, calculate
+from tools import search_web, search_documents, summarize_document, make_quiz, calculate, weather_tool
 from RAG import answer_with_rag
 
 
@@ -19,9 +19,10 @@ Catégories :
 - summary     : résumer un thème ou un ensemble de documents
 - quiz        : générer des questions de révision
 - calcul      : calcul arithmétique (addition, soustraction, multiplication, division)
+- météo       : demande de météo ou de température pour une ville
 - chat        : salutation ou conversation générale sans besoin de documents ni d'outils
 
-Réponds avec un seul mot parmi : rag, web, doc_search, summary, quiz, calcul, chat
+Réponds avec un seul mot parmi : rag, web, doc_search, summary, quiz, calcul, météo, chat
 
 Question : {question}
 
@@ -30,7 +31,7 @@ Catégorie :"""
     response = llm.invoke(prompt)
     category = response.content.strip().lower().split()[0]
 
-    valid = {"rag", "web", "doc_search", "summary", "quiz", "calcul", "chat"}
+    valid = {"rag", "web", "doc_search", "summary", "quiz", "calcul", "météo", "chat"}
     return category if category in valid else "rag"
 
 
@@ -51,6 +52,10 @@ def route_query(question, vectorstore, llm):
 
     elif mode == "calcul":
         return {"mode": "calcul", "result": calculate(question)}
+
+    elif mode == "météo":
+        city = question.strip()
+        return {"mode": "météo", "result": weather_tool(city)}
 
     elif mode == "chat":
         response = llm.invoke(question)
