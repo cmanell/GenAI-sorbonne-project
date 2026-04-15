@@ -1,16 +1,33 @@
 import re
 
+import numexpr
 from ddgs import DDGS
+
+
+def _extract_expression(text: str) -> str:
+    text = text.replace(",", ".")
+    tokens = re.findall(r'[\d]+(?:\.\d+)?(?:[eE][+-]?\d+)?|[+\-*/()^]', text)
+    if not tokens:
+        return ""
+    return " ".join(tokens)
 
 
 def calculate(expression: str) -> str:
     try:
-        sanitized = re.sub(r"[^0-9+\-*/()., ]", "", expression)
-        sanitized = sanitized.replace(",", ".")
-        result = eval(sanitized, {"__builtins__": {}})
-        return f"{expression} = {result}"
+        try:
+            result = numexpr.evaluate(expression.strip())
+        except Exception:
+            cleaned = _extract_expression(expression)
+            if not cleaned:
+                return f"Erreur de calcul : expression non reconnue — '{expression}'"
+            result = numexpr.evaluate(cleaned)
+
+        value = result.item() if hasattr(result, "item") else result
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(round(value, 10))
     except Exception as e:
-        return f"Impossible de calculer '{expression}' : {e}"
+        return f"Erreur de calcul : {e}"
 
 
 def search_documents(vectorstore, query, k=5):

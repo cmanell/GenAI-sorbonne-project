@@ -9,3 +9,4 @@ sentence-transformers
 pypdf
 docx2txt
 ddgs
+numexpr
