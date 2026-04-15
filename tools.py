@@ -128,24 +128,3 @@ def weather_tool(city: str) -> str:
         return f"Weather error: {e}"
     
 
-def web_summary(llm, query: str):
-    results = search_web(query)
-    text = "\n\n".join(r["snippet"] for r in results if r.get("snippet"))
-
-    prompt = f"""
-    Tu es un assistant.
-    Résume les informations suivantes pour répondre à la question.
-
-    Informations :
-    {text}
-
-    Question :
-    {query}
-
-    Réponse en français :
-    """
-    response = llm.invoke(prompt)
-    return response.content, results
-
-
-
