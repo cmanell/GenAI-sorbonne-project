@@ -36,9 +36,14 @@ Catégorie :"""
 
 
 def extract_expression(question: str, llm) -> str:
-    prompt = f"""Extrait uniquement l'expression mathématique de cette question.
-Réponds avec juste l'expression en notation Python (utilise ** pour les puissances, sqrt(), log(), exp(), sin(), cos()...).
-Ne donne aucune explication, juste l'expression.
+    prompt = f"""Transforme cette question en une expression mathématique Python évaluable.
+
+Règles strictes :
+- Utilise ** pour les puissances (jamais ^ ni ²)
+- Utilise pi pour le nombre pi (jamais π ni 3.14...)
+- Utilise sqrt(), log(), exp(), sin(), cos() pour les fonctions
+- Rappel : surface d'un cercle = pi * r**2, périmètre = 2 * pi * r
+- Réponds UNIQUEMENT avec l'expression, sans texte ni explication
 
 Question : {question}
 

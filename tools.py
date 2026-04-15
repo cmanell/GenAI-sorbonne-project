@@ -1,8 +1,11 @@
+import math
 import re
 
 import numexpr
 import requests
 from ddgs import DDGS
+
+_CONSTANTS = {"pi": math.pi, "e": math.e}
 
 
 def _extract_expression(text: str) -> str:
@@ -15,19 +18,23 @@ def _extract_expression(text: str) -> str:
 
 
 def _to_numexpr(expr: str) -> str:
-    """Convert ^ to ** for numexpr compatibility."""
-    return expr.replace("^", "**")
+    """Normalise l'expression pour numexpr."""
+    expr = expr.replace("^", "**")
+    expr = expr.replace("π", "pi")
+    expr = expr.replace("²", "**2")
+    expr = expr.replace("³", "**3")
+    return expr
 
 
 def calculate(expression: str) -> str:
     try:
         try:
-            result = numexpr.evaluate(_to_numexpr(expression.strip()))
+            result = numexpr.evaluate(_to_numexpr(expression.strip()), local_dict=_CONSTANTS)
         except Exception:
             cleaned = _extract_expression(expression)
             if not cleaned:
                 return f"Erreur de calcul : expression non reconnue — '{expression}'"
-            result = numexpr.evaluate(_to_numexpr(cleaned))
+            result = numexpr.evaluate(_to_numexpr(cleaned), local_dict=_CONSTANTS)
 
         value = result.item() if hasattr(result, "item") else result
         if isinstance(value, float) and value.is_integer():
