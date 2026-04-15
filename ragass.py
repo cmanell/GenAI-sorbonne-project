@@ -423,7 +423,7 @@ def dispatch_mode(mode_key: str, query: str, llm, vectorstore, k_docs: int, mode
     elif mode_key == "calcul":
         from tools import calculate
         import re
-        match = re.search(r"[\d+\-*/()., ]+", query)
+        match = re.search(r"[\d+\-*/().^, ]+", query)
         expression = match.group().strip() if match else query
         result = calculate(expression)
         st.markdown(f"<div class='mode-tag'>{mode_label}</div>", unsafe_allow_html=True)

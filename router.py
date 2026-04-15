@@ -51,7 +51,7 @@ def route_query(question, vectorstore, llm):
         return {"mode": "quiz", "result": make_quiz(vectorstore, llm, question)}
 
     elif mode == "calcul":
-        match = re.search(r"[\d+\-*/()., ]+", question)
+        match = re.search(r"[\d+\-*/().^, ]+", question)
         expression = match.group().strip() if match else question
         return {"mode": "calcul", "result": calculate(expression)}
 
