@@ -3,12 +3,13 @@ def init_memory(session_state):
         session_state.messages = []
 
 
-def add_message(session_state, role: str, content, route: str = "chat", docs=None, extra=None):
+def add_message(session_state, role: str, content, route: str = "chat", tool: str = None, docs=None, extra=None):
     session_state.messages.append(
         {
             "role": role,
             "content": content,
             "route": route,
+            "tool": tool,
             "docs": docs or [],
             "extra": extra or [],
         }

@@ -338,6 +338,7 @@ if run_btn and query.strip():
             )
 
             route_name = routed.get("route", "chat")
+            tool_name = routed.get("tool")
             result = routed.get("result", "")
             docs = routed.get("docs", [])
             extra = routed.get("extra", [])
@@ -347,6 +348,7 @@ if run_btn and query.strip():
                 "assistant",
                 result,
                 route=route_name,
+                tool=tool_name,
                 docs=docs,
                 extra=extra,
             )
@@ -381,7 +383,7 @@ with tab_result:
             if last_assistant.get("docs"):
                 render_sources(last_assistant["docs"])
 
-            if last_assistant.get("extra"):
+            if last_assistant.get("tool") == "web" and last_assistant.get("extra"):
                 render_web_results(last_assistant["extra"])
 
 # =========================================================
@@ -406,7 +408,7 @@ with tab_history:
                 if msg.get("docs"):
                     render_sources(msg["docs"])
 
-                if msg.get("extra"):
+                if msg.get("tool") == "web" and msg.get("extra"):
                     render_web_results(msg["extra"])
 
 # =========================================================
